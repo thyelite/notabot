@@ -64,7 +64,7 @@ def main():
     with mss.mss() as sct:
         mon = sct.monitors[0]
         print(f"\nLoaded colors: {colors_rgb}  tol={TOL}")
-        print("Press ENTER in this console to start each color; ESC in preview or Ctrl+C exits.\n")
+        print("Press ENTER in this console to start each color; Ctrl+C exits.\n")
 
         # process colors sequentially
         for idx, rgb in enumerate(colors_rgb, 1):
@@ -74,19 +74,13 @@ def main():
 
             lower, upper = bgr_bounds_from_rgb(rgb)
             no_match_frames = 0
-            print(f"→ Working color {rgb}. (ESC/Ctrl+C to quit this run)")
+            print(f"→ Working color {rgb}.")
 
             while not stop_flag:
                 shot = sct.grab(mon)
                 frame = np.array(shot)[:, :, :3]  # BGR
 
                 mask = cv2.inRange(frame, lower, upper)
-                cv2.imshow("mask preview (ESC to quit)", mask)
-                k = cv2.waitKey(1) & 0xFF
-                if k == 27:  # ESC in the preview
-                    stop_flag = True
-                    break
-
                 num, labels, stats, cents = cv2.connectedComponentsWithStats(mask, connectivity=4)
 
                 # collect eligible blobs
@@ -95,7 +89,6 @@ def main():
                     x, y, w, h, area = stats[i]
                     if w >= 2 and h >= 2:
                         cx, cy = map(int, cents[i])
-                        # skip if this blob (by centroid) was ever clicked before
                         if centroid_in_any_rect(cx, cy, clicked_rects):
                             continue
                         eligible.append((x, y, w, h, cx, cy))
@@ -110,7 +103,7 @@ def main():
                     print(f"✓ Finished color {rgb} (no matches recently).")
                     break
 
-                # click all current eligible blobs (fast, one pass)
+                # click all current eligible blobs
                 for x, y, w, h, cx, cy in eligible:
                     if stop_flag: break
                     pyautogui.moveTo(cx, cy, duration=0)
@@ -120,7 +113,6 @@ def main():
                         clicked_rects = clicked_rects[-1000:]
                     time.sleep(random.uniform(*CLICK_DELAY_RANGE))
 
-        cv2.destroyAllWindows()
         print("Done.")
 
 if __name__ == "__main__":
